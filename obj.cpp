@@ -14,20 +14,20 @@
 
 int main(int argc, char * argv[])
 {
-  {
-    // Create mesh of a cube
-    Eigen::MatrixXd V,UV,NV;
-    Eigen::MatrixXi F,UF,NF;
-    cube(V,F,UV,UF,NV,NF);
-    write_obj("cube.obj",V,F,UV,UF,NV,NF);
-    igl::readOBJ("cube.obj",V,UV,NV,F,UF,NF);
-    {
-      QuadViewer v;
-      v.set_mesh(V,F,UV,UF,NV,NF);
-      set_texture_from_png("../data/rubiks-cube.png", v.viewer.data());
-      v.launch();
-    }
-  }
+//  {
+//    // Create mesh of a cube
+//    Eigen::MatrixXd V,UV,NV;
+//    Eigen::MatrixXi F,UF,NF;
+//    cube(V,F,UV,UF,NV,NF);
+//    write_obj("cube.obj",V,F,UV,UF,NV,NF);
+//    igl::readOBJ("cube.obj",V,UV,NV,F,UF,NF);
+//    {
+//      QuadViewer v;
+//      v.set_mesh(V,F,UV,UF,NV,NF);
+//      set_texture_from_png("../data/rubiks-cube.png", v.viewer.data());
+//      v.launch();
+//    }
+//  }
 
   {
     // Create mesh of a sphere

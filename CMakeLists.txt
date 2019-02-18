@@ -18,6 +18,8 @@ else()
   file(GLOB SRCFILES src/*.cpp)
 endif()
 
+add_executable(fakeConsole "fakeConsole.cpp")
+
 add_library(core ${SRCFILES})
 target_link_libraries(core igl::core igl::opengl igl::opengl_glfw )
 
@@ -30,4 +32,3 @@ target_link_libraries(quad_subdivision core igl::core igl::opengl igl::opengl_gl
 add_executable(obj "obj.cpp")
 target_link_libraries(obj core igl::png igl::core igl::opengl igl::opengl_glfw )
 
-add_executable(fakeConsole "src/fakeConsole.cpp")
