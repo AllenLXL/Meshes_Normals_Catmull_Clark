@@ -22,13 +22,13 @@ connected to each other). The connectivity is also sometimes referred to as the
 
 The [graphics pipeline](https://en.wikipedia.org/wiki/Graphics_pipeline) works
 on a per-triangle and per-vertex basis. So the simplest way to store geometry is
-a 3D position $\v_i ∈ \R³$ for each $i$-th vertex of the mesh. And to store
+a 3D position $v_i \in R^3$ for each $i$-th vertex of the mesh. And to store
 triangle connectivity as an ordered triplet of indices referencing vertices:
 ${i,j,k}$ defines a triangle with corners at vertices $\v_i$, $\v_j$ and $\v_k$.
 Thus, the geometry is stored as a list of $n$ 3D vectors: efficiently, we can
-put these vectors in the rows of a real-valued matrix $\V ∈ \R^{n×3}$. Likewise,
+put these vectors in the rows of a real-valued matrix $V ∈ \R^{n×3}$. Likewise,
 the connectivity is stored as a list of $m$ triplets: efficiently, we can put
-these triplets in the rows of an integer-valued matrix $\F ∈ [0,n-1]^{m×3}$.
+these triplets in the rows of an integer-valued matrix $F ∈ [0,n-1]^{m×3}$.
 
 > **Question:** What if we want to store a (pure-)quad mesh?
 
@@ -79,7 +79,7 @@ This raises the question: what normals should we put at vertices or corners of
 our mesh? 
 
 For a faceted surface (e.g., a cube), all corners of a planar face $f$ should
-share the face's normal $\n_f ∈ \R³$ .
+share the face's normal $n_f ∈ \R³$ .
 
 For a smooth surface (e.g., a sphere), corners of triangles located at the same
 vertex should share the same normal vector. This way the rendering is continuous
@@ -90,7 +90,7 @@ angle-weighted (geometrically well motivated, but not robust near zero-area
 triangles), area-weighted (geometrically reasonable, well behaved). In this
 assignment, we'll compute area-weighted per-vertex normals:
 
-$$\n_v = \frac{∑\limits_{f∈N(v)} a_f \n_f}{\left\|∑\limits_{f∈N(v)} a_f \n_f\right\|},$$
+$$n_v = \frac{∑\limits_{f∈N(v)} a_f n_f}{\left\|∑\limits_{f∈N(v)} a_f n_f\right\|},$$
 where $N(v)$ is the set of faces neighboring the $v$-th vertex.
 
 [per-vertex-normal]: images/per-vertex-normal.png height=300px
@@ -104,8 +104,8 @@ vertex). For each corner, we'll again compute an area-weighted average of normal
 triangles incident on the shared vertex at this corner, but we'll ignore
 triangle's whose normal is too different from the corner's face's normal:
 
-$$\n_{f,c} = 
-\frac{∑\limits_{g∈N(v)\,|\,\n_g⋅\n_f<ε } a_g \n_g}{\left\|\left\|∑\limits_{g∈N(v)\,|\,\n_g⋅\n_f<ε } a_g \n_g\right\|\right\|},
+$$n_{f,c} = 
+\frac{∑\limits_{g∈N(v)\,|\,n_g⋅n_f<ε } a_g n_g}{\left\|\left\|∑\limits_{g∈N(v)\,|\,n_g⋅n_f<ε } a_g n_g\right\|\right\|},
 $$
 where $ε$ is the maximum dot product between two face normals before we declare
 there is a crease between them.
