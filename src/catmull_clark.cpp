@@ -36,9 +36,7 @@ void catmull_clark(
     // op for original point
     int op0 = F(i,0), op1 = F(i,1), op2 = F(i,2), op3 = F(i,3);
 
-    facePoint(i,0) = (V(op0,0), V(op1,0), V(op2,0), V(op3,0))/4.0;
-    facePoint(i,1) = (V(op0,1), V(op1,1), V(op2,1), V(op3,1))/4.0;
-    facePoint(i,2) = (V(op0,2), V(op1,2), V(op2,2), V(op3,2))/4.0;
+    facePoint.row(i) << (V.row(op0)+V.row(op1)+V.row(op2)+V.row(op3))/4.0;
   }
 
   /*
@@ -49,122 +47,149 @@ void catmull_clark(
   We collect all this information in this loop.
    */
   // ij entry stores face idx into F
-  MatrixXi edgeMat = MatrixXi::Constant(numV,numV,-1);
+
+  // pt to its adj pts
+  unordered_map<int, vector<int>> ptToAdjPt;
+  // pt to its adj face
+  unordered_map<int, vector<int>> ptToAdjFc;
+
   for (int i=0;i<numF;i++){
-    int pt0=F(i,0);
-    int pt1=F(i,1);
-    int pt2=F(i,2);
-    int pt3=F(i,3);
-    edgeMat(pt0,pt1) = i;
-//    edgeMat(pt1,pt0) = i;
+    ptToAdjPt[F(i,0)].push_back(F(i,1));
+    ptToAdjFc[F(i,0)].push_back(i);
 
-    edgeMat(pt1,pt2) = i;
-//    edgeMat(pt2,pt1) = i;
+    ptToAdjPt[F(i,1)].push_back(F(i,2));
+    ptToAdjFc[F(i,1)].push_back(i);
 
-    edgeMat(pt2,pt3) = i;
-//    edgeMat(pt3,pt2) = i;
+    ptToAdjPt[F(i,2)].push_back(F(i,3));
+    ptToAdjFc[F(i,2)].push_back(i);
 
-    edgeMat(pt3,pt0) = i;
-//    edgeMat(pt0,pt3) = i;
+    ptToAdjPt[F(i,3)].push_back(F(i,0));
+    ptToAdjFc[F(i,3)].push_back(i);
   }
+
 
   MatrixXd edgePtMat = MatrixXd::Zero(numF*2,3);
 
   // ij entry store idx x => edge ij has edge point at edgePtMat.row(x)
-//  cout << "74=======================DEBUG=======================" << endl;
-  MatrixXi edgeToEdgePt = edgeMat;
+  MatrixXi edgeToEdgePt = MatrixXi::Constant(numV,numV,-1);
+
   int cur=0;
-
   for (int i=0;i<numV;i++){
-    RowVector3d avgFacePt;
-    for (int j=0;j<numV;j++){
-      if (edgeToEdgePt(i,j)!=-1 && i<j){
-        int faceId1, faceId2;
+    int ctrPtId = i;
+    vector<int> surroundingPt = ptToAdjPt[ctrPtId];
+    vector<int> surroundingFc = ptToAdjFc[ctrPtId];
+    for (int j=0;j<surroundingPt.size();j++){
+      int endPtId = surroundingPt[j];
+      if (ctrPtId < endPtId){
+        int faceId1;
+        faceId1=surroundingFc[j];
+        // want face id2
+        int faceId2;
+        for (int k=0;k<ptToAdjPt[endPtId].size();k++){
+          if (ptToAdjPt[endPtId][k]==ctrPtId){
+            faceId2 = ptToAdjFc[endPtId][k];
+            break;
+          }
+        }
+        edgeToEdgePt(ctrPtId, endPtId) = cur;
+        edgeToEdgePt(endPtId, ctrPtId) = cur;
 
-        faceId1=edgeToEdgePt(i,j);
-        faceId2=edgeToEdgePt(j,i);
-
-        avgFacePt = facePoint.row(faceId1) + facePoint.row(faceId2) + V.row(i) + V.row(j);
-        avgFacePt /= 4.0;
-
-        edgeToEdgePt(i, j) = cur;
-        edgeToEdgePt(j, i) = cur;
-
+        RowVector3d avgFacePt = (facePoint.row(faceId1) + facePoint.row(faceId2) + V.row(ctrPtId) + V.row(endPtId))/4.0;
         edgePtMat.row(cur) << avgFacePt;
         cur++;
       }
-//      cout <<"i j is " << i << " " << j << endl;
     }
   }
-
+  SV<<V,edgePtMat,facePoint;
 
   // fill SF matrix
   cur=0;
+
+//  unordered_map<int, RowVector3d> oriPToSumFcPt;
   for (int i=0;i<numF;i++){
     int facePtId = i;
     int oriPtId0 = F(i,0), oriPtId1 = F(i,1), oriPtId2 = F(i,2), oriPtId3 = F(i,3);
     // TODO counter clock wise attempt first
     // 1st sub face
-    SF(cur,0) = oriPtId0;
-    SF(cur,1) = edgeToEdgePt(oriPtId0,oriPtId1)+numV;
-    SF(cur,2) = i+(numV*3);
-    SF(cur,3) = edgeToEdgePt(oriPtId3,oriPtId0)+numV;
+    RowVector4i temp0(oriPtId0, edgeToEdgePt(oriPtId0,oriPtId1)+numV, i+(numV*3), edgeToEdgePt(oriPtId3,oriPtId0)+numV);
+//    oriPToSumFcPt[oriPtId0] += (SV.row(oriPtId0)+SV.row(edgeToEdgePt(oriPtId0,oriPtId1)+numV)+SV.row(i+(numV*3))+SV.row(edgeToEdgePt(oriPtId3,oriPtId0)+numV))/4.0;
+    SF.row(cur) << temp0;
     cur++;
 
     // 2nd sub face
-    SF(cur,0) = oriPtId1;
-    SF(cur,1) = edgeToEdgePt(oriPtId1,oriPtId2)+numV;
-    SF(cur,2) = i+(numV*3);
-    SF(cur,3) = edgeToEdgePt(oriPtId0,oriPtId1)+numV;
+    RowVector4i temp1(oriPtId1, edgeToEdgePt(oriPtId1,oriPtId2)+numV, i+(numV*3), edgeToEdgePt(oriPtId0,oriPtId1)+numV);
+//    oriPToSumFcPt[oriPtId1] += (SV.row(oriPtId1)+SV.row(edgeToEdgePt(oriPtId1,oriPtId2)+numV)+SV.row(i+(numV*3))+SV.row(edgeToEdgePt(oriPtId0,oriPtId1)+numV))/4.0;
+    SF.row(cur) << temp1;
     cur++;
 
     // 3rd sub face
-    SF(cur,0) = oriPtId2;
-    SF(cur,1) = edgeToEdgePt(oriPtId2,oriPtId3)+numV;
-    SF(cur,2) = i+(numV*3);
-    SF(cur,3) = edgeToEdgePt(oriPtId1,oriPtId2)+numV;
+    RowVector4i temp2(oriPtId2, edgeToEdgePt(oriPtId2,oriPtId3)+numV, i+(numV*3), edgeToEdgePt(oriPtId1,oriPtId2)+numV);
+//    oriPToSumFcPt[oriPtId2] += (SV.row(oriPtId2)+SV.row(edgeToEdgePt(oriPtId2,oriPtId3)+numV)+SV.row(i+(numV*3))+SV.row(edgeToEdgePt(oriPtId1,oriPtId2)+numV))/4.0;
+    SF.row(cur) << temp2;
     cur++;
 
     // 4th sub face
-    SF(cur,0) = oriPtId3;
-    SF(cur,1) = edgeToEdgePt(oriPtId3,oriPtId0)+numV;
-    SF(cur,2) = i+(numV*3);
-    SF(cur,3) = edgeToEdgePt(oriPtId2,oriPtId3)+numV;
+    RowVector4i temp3(oriPtId3, edgeToEdgePt(oriPtId3,oriPtId0)+numV, i+(numV*3), edgeToEdgePt(oriPtId3,oriPtId2)+numV);
+//    oriPToSumFcPt[oriPtId3] += (SV.row(oriPtId3)+SV.row(edgeToEdgePt(oriPtId3,oriPtId0)+numV)+SV.row(i+(numV*3))+SV.row(edgeToEdgePt(oriPtId3,oriPtId2)+numV))/4.0;
+    SF.row(cur) << temp3;
     cur++;
   }
+  cout <<"163================================="<<endl;
 
+  unordered_map<int, vector<int>> ptToNewAdjFc;
+
+  for (int i=0;i<SF.rows();i++){
+    ptToNewAdjFc[SF(i,0)].push_back(i);
+
+    ptToNewAdjFc[SF(i,1)].push_back(i);
+
+    ptToNewAdjFc[SF(i,2)].push_back(i);
+
+    ptToNewAdjFc[SF(i,3)].push_back(i);
+
+  }
+
+  MatrixXd newFacePoint = MatrixXd::Zero(SF.rows(),3);
+  for(int i=0;i<SF.rows();i++){
+    // op for original point
+    int op0 = SF(i,0), op1 = SF(i,1), op2 = SF(i,2), op3 = SF(i,3);
+    newFacePoint.row(i) << (SV.row(op0)+SV.row(op1)+SV.row(op2)+SV.row(op3))/4.0;
+  }
+  cout <<"163================================="<<endl;
 
   MatrixXd newV = MatrixXd::Zero(numV,3);
   for (int i=0;i<numV;i++){
-    vector<int> nbrPt;
-    for (int j=0;j<numV;j++){
-      if (edgeMat(i,j)!=-1){
-        nbrPt.push_back(j);
-      }
-//      cout <<"i j is " << i << " " << j << endl;
-    }
+    vector<int> nbrPt = ptToAdjPt[i];
     int N = static_cast<int>(nbrPt.size());
-    RowVector3d FSum(0.0,0.0,0.0), RSum(0.0,0.0,0.0);
-    for (int k=0;k<N;k++){
-      RowVector3d temp = facePoint.row(edgeMat(i,nbrPt[k]));
-      FSum += temp;
-      temp = edgePtMat.row(edgeToEdgePt(i,nbrPt[k]));
-      RSum += temp;
-    }
-//    cout << "152=======================DEBUG=======================" << endl;
-    RowVector3d FF = FSum/N;
-    RowVector3d RR = RSum/N;
     RowVector3d PP = V.row(i);
 
-    RowVector3d newP = (FF+2.0*RR+(N-1)*PP)/N;
+    RowVector3d FSum(0.0,0.0,0.0), RSum(0.0,0.0,0.0);
+    RowVector3d temp;
+
+    for (int j=0;j<N;j++){
+      temp = (V.row(nbrPt[j]) + PP)/2.0;
+      RSum += temp;
+    }
+//    vector<int> newAdjFcId = ptToNewAdjFc[i];
+    for (int k=0;k<ptToNewAdjFc[i].size();k++){
+      // TODO using recently created face
+
+      temp = newFacePoint.row(ptToNewAdjFc[i][k]);
+      FSum += temp;
+    }
+
+    RowVector3d FF = FSum/N;
+    RowVector3d RR = RSum/N;
+
+
+    RowVector3d newP = (FF+2.0*RR+(N-3)*PP)/N;
     newV.row(i) << newP;
-
   }
-//  cout << "=======================DEBUG=======================" << endl;
+  SV << newV,edgePtMat,facePoint;
 
-
+  cout <<"================================="<<endl;
   // new SV
-  SV<<newV,edgePtMat,facePoint;
-  catmull_clark(MatrixXd(SV), MatrixXi(SF), num_iters-1, SV, SF);
-}
 
+//  catmull_clark(MatrixXd(SV), MatrixXi(SF), num_iters-1, SV, SF);
+}
+//
