@@ -190,6 +190,6 @@ void catmull_clark(
   cout <<"================================="<<endl;
   // new SV
 
-//  catmull_clark(MatrixXd(SV), MatrixXi(SF), num_iters-1, SV, SF);
+  catmull_clark(MatrixXd(SV), MatrixXi(SF), num_iters-1, SV, SF);
 }
 //

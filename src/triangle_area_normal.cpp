@@ -7,7 +7,7 @@ Eigen::RowVector3d triangle_area_normal(
   const Eigen::RowVector3d & b, 
   const Eigen::RowVector3d & c)
 {
-  RowVector3d res = (a-b).cross(a-c);
-  return (res.norm()/2.0) * res.normalized();
-
+  // magnitude of cross product is area of parallelogram
+  RowVector3d res = (b-a).cross(c-a).normalized();
+  return ((b-a).cross(c-a).norm()/2.0) * res;
 }

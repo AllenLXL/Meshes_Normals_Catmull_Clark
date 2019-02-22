@@ -1,5 +1,9 @@
 #include "per_vertex_normals.h"
 #include "triangle_area_normal.h"
+#include <unordered_map>
+#include <vector>
+//#include <Eigen/Dense>
+//#include <Eigen/Geometry>
 
 using namespace Eigen;
 using namespace std;
@@ -9,34 +13,31 @@ void per_vertex_normals(
   const Eigen::MatrixXi & F,
   Eigen::MatrixXd & N)
 {
-  N = Eigen::MatrixXd::Zero(V.rows(),3);
+  N.resize(V.rows(),3);
+//  N = MatrixXd::Zero(V.rows(),3);
+  // pt to its adj face
+  unordered_map<int, vector<int>> ptToAdjFc;
 
-  MatrixXi edgeMat = MatrixXi::Constant(V.rows(),V.rows(),-1);
   for (int i=0;i<F.rows();i++){
-    int pt0=F(i,0);
-    int pt1=F(i,1);
-    int pt2=F(i,2);
-    int pt3=F(i,3);
+    ptToAdjFc[F(i,0)].push_back(i);
 
-    edgeMat(pt0,pt1) = i;
-    edgeMat(pt1,pt2) = i;
-    edgeMat(pt2,pt3) = i;
-    edgeMat(pt3,pt0) = i;
+    ptToAdjFc[F(i,1)].push_back(i);
+
+    ptToAdjFc[F(i,2)].push_back(i);
   }
 
-  for (int i=0; i<F.rows(); i++) {
-    double sumArea = 0.0;
-//    RowVector3d triNml = triangle_area_normal(V.row(F(i,0)),V.row(F(i,1)),V.row(F(i,2)));
 
-    for (int j=0; j<V.rows();j++) {
+  for (int i=0;i<V.rows();i++){
+    RowVector3d res(0.0,0.0,0.0);
+//    RowVector3d perFcNml;
+    for (int j=0;j<ptToAdjFc[i].size();j++){
+      int triPt0 = F.row(ptToAdjFc[i][j])(0);
+      int triPt1 = F.row(ptToAdjFc[i][j])(1);
+      int triPt2 = F.row(ptToAdjFc[i][j])(2);
 
-      if (edgeMat(i,j)!=-1){
-        int faceIdx = edgeMat(i,j);
-        sumArea += triangle_area_normal(V.row(F(faceIdx,0)),V.row(F(faceIdx,1)),V.row(F(faceIdx,2))).norm();
-        N.row(i) += triangle_area_normal(V.row(F(faceIdx, 0)), V.row(F(faceIdx, 1)), V.row(F(faceIdx, 2)));
-      }
+      res += triangle_area_normal(V.row(triPt0),V.row(triPt1),V.row(triPt2));
     }
-    N.row(i) = (N.row(i)/sumArea).normalized();
+    N.row(i) << res.normalized();
   }
 
 }
