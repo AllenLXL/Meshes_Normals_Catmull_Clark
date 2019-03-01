@@ -24,7 +24,7 @@ void sphere(
   UV.resize((num_faces_u+1)*(num_faces_v+1), 2); // #V by 2 (xyz)->(uv)
   UF.resize(num_faces_u*num_faces_v, 4);         // #F by 4
 
-  NV.resize((num_faces_u+1)*(num_faces_v+1), 3);         // #NV by 3 #NV==#V
+  NV.resize((num_faces_u+1)*(num_faces_v+1), 3);         // #NV by 3 #NV==#V one extra dummy row & col
   NF.resize(num_faces_u*num_faces_v, 4);         // #F by 4
 
   double xLen=1.0/num_faces_u, yLen=1.0/num_faces_v;
@@ -44,8 +44,9 @@ void sphere(
 
       V.row(cur) << x,y,z;
       UV.row(cur) << u,v;
-      NV.row(cur) << x,y,z;
-
+//      if (i!=num_faces_v && j != num_faces_u){
+        NV.row(cur) << x,y,z;
+//      }
       cur++;
     }
   }

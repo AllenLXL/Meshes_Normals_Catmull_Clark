@@ -35,14 +35,12 @@ void per_corner_normals(
 
         RowVector3d adjNml = triangle_area_normal(triPt0, triPt1,triPt2).normalized();
 
-        if (curFcNml.dot(adjNml) > cos(corner_threshold)){
+        if (curFcNml.dot(adjNml) > cos(corner_threshold*M_PI/180.0)){
           res += triangle_area_normal(triPt0, triPt1,triPt2);
         }
       }
       N.row(cur) << res.normalized();
       cur++;
     }
-
   }
-
 }

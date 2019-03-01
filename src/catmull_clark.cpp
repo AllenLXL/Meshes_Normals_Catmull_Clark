@@ -38,14 +38,6 @@ void catmull_clark(
 
     facePoint.row(i) << (V.row(op0)+V.row(op1)+V.row(op2)+V.row(op3))/4.0;
   }
-
-  /*
-  First we collect all the information that we need to run the algorithm.
-  Each point must know its adjacent edges and faces.
-  Each face must know its edges and points.
-  Each edge must know its adjacent faces and points.
-  We collect all this information in this loop.
-   */
   // ij entry stores face idx into F
 
   // pt to its adj pts
@@ -105,36 +97,31 @@ void catmull_clark(
   // fill SF matrix
   cur=0;
 
-//  unordered_map<int, RowVector3d> oriPToSumFcPt;
   for (int i=0;i<numF;i++){
     int facePtId = i;
     int oriPtId0 = F(i,0), oriPtId1 = F(i,1), oriPtId2 = F(i,2), oriPtId3 = F(i,3);
-    // TODO counter clock wise attempt first
+    // counter clock wise attempt first
     // 1st sub face
     RowVector4i temp0(oriPtId0, edgeToEdgePt(oriPtId0,oriPtId1)+numV, i+(numV*3), edgeToEdgePt(oriPtId3,oriPtId0)+numV);
-//    oriPToSumFcPt[oriPtId0] += (SV.row(oriPtId0)+SV.row(edgeToEdgePt(oriPtId0,oriPtId1)+numV)+SV.row(i+(numV*3))+SV.row(edgeToEdgePt(oriPtId3,oriPtId0)+numV))/4.0;
     SF.row(cur) << temp0;
     cur++;
 
     // 2nd sub face
     RowVector4i temp1(oriPtId1, edgeToEdgePt(oriPtId1,oriPtId2)+numV, i+(numV*3), edgeToEdgePt(oriPtId0,oriPtId1)+numV);
-//    oriPToSumFcPt[oriPtId1] += (SV.row(oriPtId1)+SV.row(edgeToEdgePt(oriPtId1,oriPtId2)+numV)+SV.row(i+(numV*3))+SV.row(edgeToEdgePt(oriPtId0,oriPtId1)+numV))/4.0;
     SF.row(cur) << temp1;
     cur++;
 
     // 3rd sub face
     RowVector4i temp2(oriPtId2, edgeToEdgePt(oriPtId2,oriPtId3)+numV, i+(numV*3), edgeToEdgePt(oriPtId1,oriPtId2)+numV);
-//    oriPToSumFcPt[oriPtId2] += (SV.row(oriPtId2)+SV.row(edgeToEdgePt(oriPtId2,oriPtId3)+numV)+SV.row(i+(numV*3))+SV.row(edgeToEdgePt(oriPtId1,oriPtId2)+numV))/4.0;
     SF.row(cur) << temp2;
     cur++;
 
     // 4th sub face
     RowVector4i temp3(oriPtId3, edgeToEdgePt(oriPtId3,oriPtId0)+numV, i+(numV*3), edgeToEdgePt(oriPtId3,oriPtId2)+numV);
-//    oriPToSumFcPt[oriPtId3] += (SV.row(oriPtId3)+SV.row(edgeToEdgePt(oriPtId3,oriPtId0)+numV)+SV.row(i+(numV*3))+SV.row(edgeToEdgePt(oriPtId3,oriPtId2)+numV))/4.0;
     SF.row(cur) << temp3;
     cur++;
   }
-  cout <<"163================================="<<endl;
+
 
   unordered_map<int, vector<int>> ptToNewAdjFc;
 
@@ -155,7 +142,7 @@ void catmull_clark(
     int op0 = SF(i,0), op1 = SF(i,1), op2 = SF(i,2), op3 = SF(i,3);
     newFacePoint.row(i) << (SV.row(op0)+SV.row(op1)+SV.row(op2)+SV.row(op3))/4.0;
   }
-  cout <<"163================================="<<endl;
+
 
   MatrixXd newV = MatrixXd::Zero(numV,3);
   for (int i=0;i<numV;i++){
@@ -170,9 +157,8 @@ void catmull_clark(
       temp = (V.row(nbrPt[j]) + PP)/2.0;
       RSum += temp;
     }
-//    vector<int> newAdjFcId = ptToNewAdjFc[i];
+
     for (int k=0;k<ptToNewAdjFc[i].size();k++){
-      // TODO using recently created face
 
       temp = newFacePoint.row(ptToNewAdjFc[i][k]);
       FSum += temp;
@@ -186,9 +172,6 @@ void catmull_clark(
     newV.row(i) << newP;
   }
   SV << newV,edgePtMat,facePoint;
-
-  cout <<"================================="<<endl;
-  // new SV
 
   catmull_clark(MatrixXd(SV), MatrixXi(SF), num_iters-1, SV, SF);
 }
